@@ -1,0 +1,48 @@
+-- 全局/分类型 版本号存储（键值对）
+CREATE TABLE IF NOT EXISTS sys_kv (
+    k          TEXT PRIMARY KEY,
+    v          TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 便于查询的索引
+CREATE INDEX IF NOT EXISTS idx_sys_kv_updated_at ON sys_kv(updated_at DESC);
+
+
+CREATE OR REPLACE FUNCTION bump_dict_version() RETURNS TRIGGER AS $$
+DECLARE
+    t TEXT;           -- 变更涉及的 dict_type
+    new_ver BIGINT;   -- 新的全局版本号
+    curr_ver BIGINT;  -- 当前版本号
+BEGIN
+    -- 找到类型：INSERT/UPDATE 取 NEW.dict_type，DELETE 取 OLD.dict_type
+    IF (TG_OP = 'DELETE') THEN
+        t := OLD.dict_type;
+    ELSE
+        t := NEW.dict_type;
+    END IF;
+
+    -- 1) 全局版本 bump
+    SELECT COALESCE(v, '0')::BIGINT INTO curr_ver FROM sys_kv WHERE k='dict:version' FOR UPDATE;
+    IF NOT FOUND THEN
+        curr_ver := 0;
+        INSERT INTO sys_kv(k, v) VALUES ('dict:version', '0')
+        ON CONFLICT (k) DO NOTHING;
+    END IF;
+    new_ver := curr_ver + 1;
+    UPDATE sys_kv SET v = new_ver::TEXT, updated_at = NOW()
+      WHERE k='dict:version';
+
+    -- 2) 类型版本 bump
+    PERFORM 1 FROM sys_kv WHERE k = ('dict:' || t || ':version') FOR UPDATE;
+    IF NOT FOUND THEN
+        INSERT INTO sys_kv(k, v) VALUES (('dict:' || t || ':version'), '1')
+        ON CONFLICT (k) DO NOTHING;
+    ELSE
+        UPDATE sys_kv SET v = (COALESCE(v,'0')::BIGINT + 1)::TEXT, updated_at = NOW()
+         WHERE k = ('dict:' || t || ':version');
+    END IF;
+
+    RETURN NULL; -- 行级触发器不修改行
+END;
+$$ LANGUAGE plpgsql;
