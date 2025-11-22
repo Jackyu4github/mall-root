@@ -1,0 +1,120 @@
+
+server:
+  port: 8080
+  ssl:
+    enabled: false
+    key-store: classpath:example.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+
+spring:
+
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:postgresql://192.168.3.7:5432/mall_db
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    # 如果你有密码
+    # password: your_password
+    # 下面这些可以后面再调
+    # lettuce:
+    #   pool:
+    #     max-active: 16
+    #     max-idle: 8
+    #     min-idle: 0
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        hbm2ddl.auto: none
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        type:
+          preferred_enum_type: postgres_enum
+    open-in-view: false
+    show-sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+  messages:
+    basename: i18n/messages   # 你自己的路径，比如 i18n/messages
+    encoding: UTF-8           # 很关键：明确指定 UTF-8
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.web.method.annotation: INFO
+    org.springframework.web.servlet.mvc.method.annotation: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
+    com.mall: INFO
+
+
+
+app:
+  security:
+    jwt-secret: "change-this-to-a-long-random-secret-at-least-32-bytes-1234567890abcd"
+    jwt-issuer: "mall-backend"
+
+  dict:
+    # 软TTL：本地缓存的兜底过期时间（支持 30m、10s、1h 这类Duration格式）
+    soft-ttl: 30m
+    # 轮询间隔（用于@Scheduled），这里用毫秒，避免@Scheduled的long解析问题
+    poll-interval-ms: 10000
+
+  pay:
+    notify-domain: "https://your-public-domain.com"   # 对外可达域名（ngrok/反向代理/线上域名）
+    return-url: "/api/v1/pay/wx/notify"  # 支付完成后前端承接页（微信/支付宝会用到,资金层结果通知）
+
+    wechat:
+      mch-id: "YOUR_MCH_ID"
+      app-id: "YOUR_WX_APPID"           # JSAPI/小程序用
+      app-id-native: "YOUR_WX_APPID_PC" # NATIVE/扫码支付用(如只一个APPID也可复用)
+      api-v3-key: "YOUR_API_V3_KEY_32BYTES"
+      serial-no: "YOUR_CERT_SERIAL_NO"
+      private-key-path: "C:/keys/apiclient_key.pem"     # Windows 路径OK
+      platform-cert-path: "C:/keys/wechat_platform_cert.pem"  # 微信平台证书，用于验证回调签名
+      # 回调地址（建议按控制器路由写死，这里只是组合展示）
+      notify-path: "/api/v1/pay/wx/notify"
+
+    alipay:
+      app-id: "YOUR_ALIPAY_APP_ID"
+      private-key: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+      alipay-public-key: "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+      gateway: "https://openapi-sandbox.dl.alipaydev.com/gateway.do"  # 沙箱
+      charset: "UTF-8"
+      sign-type: "RSA2"
+      format: "json"
+      notify-path: "/api/v1/pay/alipay/notify"
+
+wechat:
+  app-id: wx09ccedcdfd204a8d
+  app-secret: 84a8b3c08d054f93f9e8cc7fe8a145af
+  redirect-uri: https://your.domain/api/v1/auth/wx/callback   # 微信开放平台回调地址（需在微信后台配置）
+  # 可选：回跳你的前端（H5/管理端）承接 JWT，用于自动登录
+  frontend-callback: https://your.frontend.site/wx-login-success
+
+  mp-app-id:  wx32d31c36a33c2363
+  mp-secret:  4eb078221a02747bdb1a270429eb054e
+
+
+mall:
+  cors:
+    allowed-origins:
+      - "https://your-admin.example.com"
+      - "https://your-h5.example.com"
+
+
+

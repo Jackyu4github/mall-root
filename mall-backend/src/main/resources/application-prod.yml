@@ -1,0 +1,11 @@
+
+app:
+  minio:
+    endpoint: https://minio.mycorp.com:9000
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    tls:
+      truststore-path: /etc/mall/certs/minio-truststore.p12
+      truststore-password: changeit
+      type: PKCS12
+
