@@ -1,0 +1,85 @@
+server:
+  port: 8090                 # notice 服务端口，别和 mall-backend 冲突
+  shutdown: graceful         # 优雅停机（WebFlux/Netty支持）
+
+spring:
+  application:
+    name: mall-notice-service
+
+  main:
+    web-application-type: reactive   # 明确是 WebFlux（避免误引 servlet）
+    banner-mode: "console"
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: ""            # 有密码就填，没有就留空
+      database: 0
+      timeout: 3s
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16      # 最大连接
+          max-idle: 8
+          min-idle: 0
+          max-wait: 2s
+
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# =============== JWT 配置（与 mall-backend 保持一致） ===============
+jwt:
+  secret: very-very-secret-key-same-as-mall-backend   # 必须和商城后端完全相同
+  expire-seconds: 86400                               # 这个值只用于解析校验，保持一致最好
+  issuer: mall                                       # 如果你 token 里有 issuer 校验就填同一个
+  header: Authorization                              # 可选：HTTP/WS header 名
+  prefix: "Bearer "                                  # 可选：header 前缀
+
+# =============== Notice 自己的业务配置（可选，但推荐放这里） ===============
+notice:
+  ws:
+    path: /ws/notify
+    max-frame-payload-length: 65536   # 单帧最大 64KB（按需调）
+  redis:
+    topic: user.notify               # pub/sub 频道名，和 mall-backend 发布一致
+  heartbeat:
+    enable: false                    # 你要做心跳就开
+    interval-seconds: 30
+
+  backend:
+    base-url: http://127.0.0.1:8080
+    orders-path: /admin/v1/orders/realtime   # 改成你真实实时订单接口
+    service-token: ""                       # 如果接口需要后台鉴权填 token
+    push:
+      orders-interval-ms: 5000
+
+logging:
+  level:
+    root: INFO
+    com.mall.notice: DEBUG           # 通知服务调试更方便
+    org.springframework.data.redis: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+# 如果你要让多实例在 k8s/SLB 下更稳，可打开下面这个
+# reactor:
+#   netty:
+#     pool:
+#       maxConnections: 1000
+#       acquireTimeout: 45s
